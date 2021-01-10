@@ -1,0 +1,162 @@
+<canvas id="snake-board" width="300" height="300"></canvas>
+
+<style>
+  canvas {
+    border: 1px solid red;
+  }
+</style>
+
+<script>
+  const canvas = document.getElementById("snake-board");
+  const context = canvas.getContext("2d");
+  const canvasWidth = canvas.width;
+  const canvasHeight = canvas.height;
+
+  let direction = 39;
+
+  let food = {
+    x: Math.round(Math.floor(Math.random() * (canvasWidth - 10)) / 10) * 10,
+    y: Math.round(Math.floor(Math.random() * (canvasHeight - 10)) / 10) * 10,
+  };
+
+  class Snake {
+    constructor(x, y) {
+      this.next = null;
+      this.x = x;
+      this.y = y;
+      this.isFeasting = false;
+    }
+
+    feast() {
+      // set a flag so we can add another node to the end of the snake on the next move
+      this.isFeasting = true;
+    }
+
+    render() {
+      let obj = this;
+      while(obj !== null) {
+        context.fillStyle = "#00FF00";
+        context.fillRect(obj.x, obj.y, 10, 10);
+        obj = obj.next;
+      }
+    }
+
+    move() {
+      // remember the previous x and y values for subsequent nodes to move into
+      let prevX = this.x;
+      let prevY = this.y;
+
+      // move the snake head first
+      switch(direction) {
+        case 37:
+          this.x -= 10;
+          break;
+        case 38:
+          this.y -= 10;
+          break;
+        case 39:
+          this.x += 10;
+          break;
+        case 40:
+          this.y += 10;
+          break;
+      }
+
+      // move the rest of the snake nodes
+      let lastObj = this;
+      let obj = this.next;
+      while(obj !== null) {
+        lastObj = obj;
+        let tempX = obj.x;
+        let tempY = obj.y;
+
+        obj.x = prevX;
+        obj.y = prevY;
+
+        prevX = tempX;
+        prevY = tempY;
+
+        obj = obj.next;
+      }
+
+      if(this.isFeasting) {
+        // add the new node at the end, then reset the feast flag
+        lastObj.next = new Snake(prevX, prevY);
+        this.isFeasting = false;
+      }
+    }
+
+    isFeastingSelf() {
+      let obj = this.next;
+      while(obj !== null) {
+        if(this.x === obj.x && this.y === obj.y) {
+          return true;
+        }
+        obj = obj.next;
+      }
+      return false;
+    }
+  }
+
+  let snake = new Snake(0, 0);
+
+  function clearCanvas() {
+    context.clearRect(0, 0, canvasWidth, canvasHeight);
+  }
+
+  document.addEventListener("keydown", function(event) {
+    event = event || window.event;
+    if(event.keyCode === 37 || event.keyCode === 38 || event.keyCode === 39 || event.keyCode === 40) {
+      snake.previousDirection = direction;
+      direction = event.keyCode;
+    }
+  });
+
+  function restartGame() {
+    // respawn the snake
+    snake = null;
+    snake = new Snake(0, 0);
+    direction = 39;
+
+    // respawn the food elsewhere
+    food.x = Math.round(Math.floor(Math.random() * (canvasWidth - 10)) / 10) * 10;
+    food.y = Math.round(Math.floor(Math.random() * (canvasWidth - 10)) / 10) * 10;
+  }
+
+  function gameLoop() {
+    clearCanvas();
+
+    // render the canvas background
+    context.fillStyle = "#000000";
+    context.fillRect(0, 0, canvasWidth, canvasHeight);
+
+    // render the food
+    context.fillStyle = "#FFFFFF";
+    context.fillRect(food.x, food.y, 10, 10);
+
+    // move the snake
+    snake.move();
+
+    // render the snake
+    snake.render();
+
+    // bounds check
+    if(snake.x < 0 || snake.x > canvasWidth - 10 ||
+       snake.y < 0 || snake.y > canvasHeight - 10 ||
+       snake.isFeastingSelf()) {
+      restartGame();
+    }
+
+    // check to see if we're feasting
+    if(snake.x === food.x && snake.y === food.y) {
+      snake.feast();
+
+      // respawn the food elsewhere
+      food.x = Math.round(Math.floor(Math.random() * (canvasWidth - 10)) / 10) * 10;
+      food.y = Math.round(Math.floor(Math.random() * (canvasWidth - 10)) / 10) * 10;
+    }
+  }
+
+  const ms = 100;
+  const timer = setInterval(gameLoop, ms);
+</script>
