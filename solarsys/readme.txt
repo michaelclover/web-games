@@ -1,0 +1,2 @@
+this needs hosting on a web server due to the use of javascript modules, else you will get CORS errors.
+You can use something like live-server to accomplish this (npm install -g live-server, then simply cd to directory and run 'live-server').
