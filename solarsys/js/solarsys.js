@@ -1,4 +1,5 @@
-import * as THREE from 'https://unpkg.com/three@0.126.1/build/three.module.js';
+import * as THREE from '/node_modules/three/build/three.module.js';
+import {OrbitControls} from '/node_modules/three/examples/jsm/controls/OrbitControls.js';
 
 const CAMERA_FOV = 75;
 const CAMERA_ASPECT = 2;
@@ -20,23 +21,19 @@ class System {
     }
 }
 
-class Body {
+class Body extends THREE.Mesh {
     constructor(geometry, material, xyz) {
-        this.mesh = new THREE.Mesh(geometry, material);
+        super(geometry, material)
         if(xyz.length !== 0) {
-            this.mesh.position.x = xyz[0];
-            this.mesh.position.y = xyz[1];
-            this.mesh.position.z = xyz[2];
+            this.position.x = xyz[0];
+            this.position.y = xyz[1];
+            this.position.z = xyz[2];
         }
         else {
-            this.mesh.position.x = 0;
-            this.mesh.position.y = 0;
-            this.mesh.position.z = 0;    
+            this.position.x = 0;
+            this.position.y = 0;
+            this.position.z = 0;    
         }
-    }
-
-    getMesh() {
-        return this.mesh;
     }
 }
 
@@ -61,8 +58,10 @@ function main() {
     const camera = new PerspectiveCamera(CAMERA_FOV, CAMERA_ASPECT, CAMERA_NEAR, CAMERA_FAR, CAMERA_XYZ);
 
     let sun = new Body(new THREE.SphereGeometry(5, 32, 32), new THREE.MeshBasicMaterial({color: 0xff0000}), [0, 0, -(CAMERA_FAR / 2)]);
-    scene.add(sun.getMesh());
+    scene.add(sun);
     
+    const controls = new OrbitControls(camera.getCamera(), renderer.domElement);
+
     function resizeCanvas() {
         const pixelRatio = window.devicePixelRatio;
         const width = canvas.clientWidth * pixelRatio | 0;
@@ -83,8 +82,8 @@ function main() {
             camera.getCamera().updateProjectionMatrix();
         }
 
-        sun.getMesh().rotation.x += 0.1;
-        sun.getMesh().rotation.y += 0.1;
+        sun.rotation.x += 0.1;
+        sun.rotation.y += 0.1;
 
         renderer.render(scene, camera.getCamera());
 
