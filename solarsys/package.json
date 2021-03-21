@@ -13,6 +13,7 @@
   "author": "Michael Clover",
   "license": "ISC",
   "dependencies": {
+    "dat.gui": "^0.7.7",
     "three": "^0.126.1"
   }
 }
