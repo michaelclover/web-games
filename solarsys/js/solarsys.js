@@ -12,38 +12,23 @@ const DEBUG = false;
 function main() {
     const canvas = document.getElementById("solarsys");
     const renderer = new THREE.WebGLRenderer({canvas});
-    const gui = new GUI();
 
-    class AxisGridHelper {
-        constructor(node, units = 10) {
-          const axes = new THREE.AxesHelper();
-          axes.material.depthTest = false;
-          axes.renderOrder = 2;  
-          node.add(axes);
-       
-          const grid = new THREE.GridHelper(units, units);
-          grid.material.depthTest = false;
-          grid.renderOrder = 1;
-          node.add(grid);
-       
-          this.grid = grid;
-          this.axes = axes;
-          this.visible = false;
-        }
-        get visible() {
-          return this._visible;
-        }
-        set visible(v) {
-          this._visible = v;
-          this.grid.visible = v;
-          this.axes.visible = v;
-        }
+    class ColourUIHelper {
+      constructor(object) {
+        this.object = object;
       }
-    
-    function makeAxisGrid(node, label, units) {
-        const helper = new AxisGridHelper(node, units);
-        gui.add(helper, 'visible').name(label);
+
+      get colour() {
+        return `#${this.object.material['color'].getHexString()}`;
+      }
+
+      set colour(hex) {
+        this.object.material['color'].set(hex);
+      }
     }
+
+    const gui = new GUI();
+    gui.domElement.id = 'gui';
 
     class PickHelper {
         constructor() {
@@ -68,16 +53,21 @@ function main() {
                 // save its color
                 this.pickedObjectSavedColor = this.pickedObject.material.emissive.getHex();
                 // set its emissive color to flashing red/yellow
-                this.pickedObject.material.emissive.setHex((time * 8) % 2 > 1 ? 0xFFFF00 : 0xFF0000);         
+                this.pickedObject.material.emissive.setHex(0xFFFFFF);         
                 if(DEBUG) {
                     console.log("Object picked");
                 }
             }
         }
+
+        getPickedObject() {
+          return this.pickedObject;
+        }
     }
 
     const scene = new THREE.Scene();
     const bodies = [];
+    const asteroids = [];
 
     const camera = new THREE.PerspectiveCamera(CAMERA_FOV, CAMERA_ASPECT, CAMERA_NEAR, CAMERA_FAR);
     camera.position.set(0, 0, 50);
@@ -110,6 +100,9 @@ function main() {
     earthOrbit.add(earth);
     bodies.push(earth);
 
+    let earthFolder = gui.addFolder('Earth');
+    earthFolder.addColor(new ColourUIHelper(earth), 'colour');
+
     const moonOrbit = new THREE.Object3D();
     moonOrbit.position.x = 2;
     earthOrbit.add(moonOrbit);
@@ -119,24 +112,33 @@ function main() {
     moonOrbit.add(moon);
     bodies.push(moon);
 
+    let moonFolder = earthFolder.addFolder('Moon');
+    moonFolder.addColor(new ColourUIHelper(moon), 'colour');
+
+    const marsOrbit = new THREE.Object3D();
+    marsOrbit.position.x = 20;
+    solarSys.add(marsOrbit);
+    bodies.push(marsOrbit);
+
+    const mars = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, segments), new THREE.MeshPhongMaterial({color: 0xFF0000, emissive: 0x112244}));
+    marsOrbit.add(mars);
+    bodies.push(mars);
+
+    let obj = { add: function(){
+      let asteroid = new THREE.Mesh(new THREE.SphereGeometry(radius, segments, segments), new THREE.MeshPhongMaterial({color: 0xFFFFFF}));
+      asteroid.scale.set(.75, .75, .75);
+      asteroid.position.x = 0;
+      asteroid.position.y = 0;
+      asteroid.position.z = -50;
+      scene.add(asteroid);
+      asteroids.push(asteroid);
+    }};
+    gui.add(obj, 'add').name('Asteroid');
+
     const color = 0xFFFFFF;
     const intensity = 3;
     const light = new THREE.PointLight(color, intensity);
     scene.add(light);
-
-    makeAxisGrid(solarSys, 'solarSys', 25);
-    makeAxisGrid(sun, 'sun');
-    makeAxisGrid(earthOrbit, 'earthOrbit');
-    makeAxisGrid(earth, 'earth');
-    makeAxisGrid(moonOrbit, 'moonOrbit');
-    makeAxisGrid(moon, 'moon');
-
-    bodies.forEach((node) => {
-        const axes = new THREE.AxesHelper();
-        axes.material.depthTest = false;
-        axes.renderOrder = 1;
-        node.add(axes);
-    })
 
     function resizeCanvas() {
         const pixelRatio = window.devicePixelRatio;
@@ -158,13 +160,17 @@ function main() {
         time *= 0.001;
 
         if(resizeCanvas()) {
-            camera.getCamera().aspect = canvas.clientWidth / canvas.clientHeight;
-            camera.getCamera().updateProjectionMatrix();
+            camera.aspect = canvas.clientWidth / canvas.clientHeight;
+            camera.updateProjectionMatrix();
         }
 
         bodies.forEach((obj) => {
             obj.rotation.y = time;
         });
+
+        asteroids.forEach((obj) => {
+            // do something
+        })
 
         pickHelper.pick(pickPosition, scene, camera, time);
 
@@ -198,18 +204,6 @@ function main() {
       window.addEventListener('mousemove', setPickPosition);
       window.addEventListener('mouseout', clearPickPosition);
       window.addEventListener('mouseleave', clearPickPosition);
-    
-      window.addEventListener('touchstart', (event) => {
-        // prevent the window from scrolling
-        event.preventDefault();
-        setPickPosition(event.touches[0]);
-      }, {passive: false});
-    
-      window.addEventListener('touchmove', (event) => {
-        setPickPosition(event.touches[0]);
-      });
-    
-      window.addEventListener('touchend', clearPickPosition);
 }
 
 main();
