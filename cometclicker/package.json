@@ -1,8 +1,8 @@
 {
-  "name": "solarsys",
+  "name": "cometclicker",
   "version": "1.0.0",
-  "description": "A simulated model of the sol solar system",
-  "main": "solarsys.js",
+  "description": "A very basic game where you must defend the earth from incoming comets",
+  "main": "cometclicker.js",
   "repository": {
     "type": "git",
     "url": "https://github.com/michaelclover/web-games.git"

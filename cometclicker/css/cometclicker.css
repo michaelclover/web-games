@@ -10,3 +10,10 @@ canvas {
     height: 100vh;
     display: block;
 }
+
+#cometsclicked {
+    position: absolute;
+    top: 0px;
+    color: white;
+    z-index: 100;
+}
