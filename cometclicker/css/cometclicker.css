@@ -17,3 +17,13 @@ canvas {
     color: white;
     z-index: 100;
 }
+
+#gameover {
+    position: absolute;
+    top: 50vh;
+    color: white;
+    z-index: 100;
+    text-align:center;
+    width: 100%;
+    visibility: hidden;
+}

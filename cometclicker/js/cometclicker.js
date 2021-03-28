@@ -2,21 +2,26 @@ import * as THREE from '/node_modules/three/build/three.module.js';
 //import {OrbitControls} from '/node_modules/three/examples/jsm/controls/OrbitControls.js';
 import {GUI} from '/node_modules/dat.gui/build/dat.gui.module.js';
 
+// camera settings.
 const CAMERA_FOV = 40;
 const CAMERA_ASPECT = 2;
 const CAMERA_NEAR = 0.1;
 const CAMERA_FAR = 1000;
 
+// adjustable comet spawn rate via dat.gui slider control.
 let cometSpawn = { rate: 10 };
+// total number of comets spawned, used to uniquely name and compare instances etc.
 let numberOfComets = 0;
+// used to keep score.
 let cometsClicked = 0;
 
+// displays some useful diagnostics in the console window.
 const DEBUG = false;
 
 function main() {
     // create canvas and renderer and append to our DOM.
     const canvas = document.getElementById("cometclicker");
-    const renderer = new THREE.WebGLRenderer({canvas});
+    const renderer = new THREE.WebGLRenderer({canvas, antialias: true});
     document.body.append(renderer.domElement);
 
     // helper UI class to modify spawned comet colours.
@@ -59,7 +64,7 @@ function main() {
                 // first picked object is the closest one.
                 this.pickedObject = intersectedObjects[0].object;
                 this.pickedObjectSavedColor = this.pickedObject.material.emissive.getHex();
-                this.pickedObject.material.emissive.setHex(0xFFFFFF);         
+                this.pickedObject.material.emissive.setHex(0x0F0F0F);         
                 if(DEBUG) {
                     console.log("Object picked");
                 }
@@ -81,10 +86,6 @@ function main() {
     //const controls = new OrbitControls(camera, renderer.domElement);
     scene.add(camera);
 
-    const cameraStick = new THREE.Object3D();
-    scene.add(cameraStick);
-    cameraStick.add(camera);
-
     // create the earth mesh.
     const earthMesh = new THREE.Mesh(new THREE.SphereGeometry(6, 32, 32), new THREE.MeshPhongMaterial({color: 0xFFFFFF}));
     // texture courtesy of James Hastings-Trew, available from http://planetpixelemporium.com/planets.html.
@@ -100,7 +101,11 @@ function main() {
     const comets = [];
 
     // create a comet mesh to store the properties we will clone for new comet instances, and that we can bind to UI controls.
-    let cometMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshPhongMaterial({color: 0x3D3D3D}));
+    let cometMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshPhongMaterial({color: 0xFFFFFF}));
+    // texture courtesy of James Hastings-Trew, available from http://planetpixelemporium.com/planets.html.
+    cometMesh.material.map = new THREE.TextureLoader().load('./assets/cometbump1k.jpg');
+    cometMesh.material.bumpMap = cometMesh.material.map;
+    cometMesh.material.needsUpdate = true;
     gui.addColor(new ColourUIHelper(cometMesh), 'colour').name('comet-colour');
     gui.add(cometSpawn, 'rate').min(10).max(100).step(10).name('spawn-rate');
 
@@ -122,6 +127,7 @@ function main() {
     const pickHelper = new PickHelper();
     clearPickPosition();
 
+    let kill = false;
     // update and render loop.
     function render(time) {
         // get the time in seconds.
@@ -138,10 +144,11 @@ function main() {
           if(DEBUG) {
             console.log("comet spawned");
           }
-          let newCometMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshPhongMaterial({color: cometMesh.material.color}))
-          newCometMesh.position.x = 20;
-          newCometMesh.position.y = 0;
-          newCometMesh.position.z = 0;
+          let newCometMesh = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshPhongMaterial({color: cometMesh.material.color, map: cometMesh.material.map, bumpMap: cometMesh.material.bumpMap}))
+          newCometMesh.material.needsUpdate = true;
+          newCometMesh.position.x = randomNumberBetween(0, 1) == 0 ? randomNumberBetween(20, 35) : randomNumberBetween(-20, -35);
+          newCometMesh.position.y = randomNumberBetween(-15, 15);
+          newCometMesh.position.z = randomNumberBetween(-50, 50);
           newCometMesh.name = numberOfComets.toString();
           numberOfComets = numberOfComets + 1;
           scene.add(newCometMesh);
@@ -150,14 +157,21 @@ function main() {
 
         earthMesh.rotation.y = time * 0.2;
         comets.forEach((obj) => {
-            // move towards the earth.
-            // TODO: implement logic to move object towards earth at random.
-            obj.position.x -= 0.1;
+            // move towards the earth, spin on axis etc.
+            //obj.position.x -= 0.1;
+            obj.rotation.y = time * 0.5;
+            obj.rotation.x = time * 0.5;
+
+            let dirX = earthMesh.position.x - obj.position.x;
+            let dirY = earthMesh.position.y - obj.position.y;
+            let dirZ = earthMesh.position.z - obj.position.z; 
+            obj.position.x += dirX / 100;
+            obj.position.y += dirY / 100;
+            obj.position.z += dirZ / 100;
 
             // check if a comet intersects with earth.
             if(earthMesh.position.distanceTo(obj.position) <= 7) {
-              // TODO: kill the scene and display score achieved in the centre of screen.
-              //scene.remove.apply(scene, scene.children);
+              kill = true;
             }
         })
 
@@ -166,8 +180,14 @@ function main() {
         renderer.render(scene, camera);
 
         requestAnimationFrame(render);
+
+        if(kill) {
+          scene.remove.apply(scene, scene.children);
+          document.getElementById("gameover").style.visibility = "visible";
+          window.cancelAnimationFrame(stopID);          
+        }
     }
-    requestAnimationFrame(render);
+    const stopID = requestAnimationFrame(render);
 
     // given a set of mouse click coordinates, returns the relative click position on the canvas.
     function getCanvasRelativePosition(event) {
@@ -214,6 +234,10 @@ function main() {
             }
           }
         }
+      }
+
+      function randomNumberBetween(min, max) {
+        return Math.floor(Math.random() * (max - min + 1) + min);
       }
 
       // add listeners for mouse movement events.
